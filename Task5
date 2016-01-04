@@ -1,0 +1,165 @@
+import matplotlib.pyplot as plt
+import numpy as nmp
+import math 
+a = 1.4
+b = 2.4
+y0 = 2.20
+eps = 0.0001
+
+
+def f(x, y):
+	#return x * y
+	return x + nmp.cos(y / 2.25)
+
+
+def euler(n):
+	x = []
+	y = []
+	h = (b - a) / n
+	x.append(a)
+	y.append(y0)
+	for i in range(1, n):
+		x.append(a + i * h)
+		y1 = y[i - 1] + h * f(x[i - 1], y[i - 1])
+		y2 = y[i - 1] + (h / 2) * (f(x[i - 1], y[i - 1]) + f(x[i - 1], y1))
+		while(abs(y2 - y1) > eps):
+			y1 = y[i - 1] + (h / 2) * (f(x[i - 1], y[i - 1]) + f(x[i - 1], y2))
+			y2 = y[i - 1] + (h / 2) * (f(x[i - 1], y[i - 1]) + f(x[i - 1], y1))
+		y.append(y2)
+	return x, y
+
+
+def rungekutt(n):
+	x = []
+	y = []
+	h = (b - a) / n
+	x.append(a)
+	y.append(y0)
+	for i in range(1, n):
+		x.append(a + i * h)
+		k1 = f(x[i - 1], y[i - 1])
+		k2 = f(x[i - 1] + (1 / 2) * h, y[i - 1] + (h / 2) * k1)
+		k3 = f(x[i - 1] + (1 / 2) * h, y[i - 1] + (h / 2) * k2)
+		k4 = f(x[i - 1] + h, y[i - 1] + h * k3)
+		yi = y[i - 1] + (h / 6) * (k1 + (2 * k2) + (2 * k3) + k4)
+		y.append(yi)
+	return x, y
+
+
+def xi(ti):
+	return (((1.0 + 0.0) / 2.0) + ((1.0 - 0.0) / 2.0) * ti)
+
+
+def gauss5(s, func):
+	t1 = t5 = 0.90618
+	t2 = t4 = 0.538469
+	t3 = 0
+	t1 *= -1
+	t2 *= -1
+	c1 = c5 = 0.23693
+	c2 = c4 = 0.47863
+	c3 = 0.56889
+	result = ((1.0 - 0.0) / 2.0) * (c1 * func(s, xi(t1)) + c2 * func(s, xi(t2)) + c3 * func(s, xi(t3)) + c4 * func(s, xi(t4)) + c5 * func(s, xi(t5)))
+	return result
+
+
+def alphaextrapol(s, x):
+	if(s == 0): return 1
+	result = 1
+	for i in range(s):
+		result *= (x + i)
+	result /= math.factorial(s)
+	return result
+
+
+def fdifferences(n):
+	xfromrk, yfromrk = rungekutt(n)
+	differencesnullcolumn = []
+	for i in range(n):
+		differencesnullcolumn.append(f(xfromrk[i], yfromrk[i]))
+	differences = []
+	differences.append(differencesnullcolumn)
+	for i in range(1, n):
+		differences.append([])
+		for j in range(0, len(differences[i - 1]) - 1):
+			differences[i].append(differences[i - 1][j + 1] - differences[i - 1][j])
+	return differences
+
+
+def extrapoladams(n, m):
+	try:
+		if(m > n - 1):
+			raise Exception("IN EXPTRAPOLAR METHOD m MUST BE LOVER OR EQUAL n - 1")
+	except Exception as inst:
+		print inst
+		return
+
+	x = []
+	y = []
+	h = (b - a) / n
+	x.append(a)
+	y.append(y0)
+	differences = fdifferences(n)
+	for i in range(1, n):
+		x.append(a + i * h)
+		result = y[i - 1]
+		for s in range(m + 1):
+			if(s <= i - 1):
+				result += h * gauss5(s, alphaextrapol) * differences[s][i - 1 - s]
+			else: 
+				break
+		y.append(result)
+	return x, y
+
+
+def alphaintrapol(s, x):
+	result = 1.0
+	if s == 0:
+		return 1
+	for i in range(s):
+		result *= (x + i - 1)
+	result /= math.factorial(s)
+	return result
+
+
+def intrapoladams(n, m):
+	try:
+		if(m > n - 1):
+			raise Exception("IN INRAPOL METHOD m MUST BE LOVER OR EQUAL n - 1")
+	except Exception as inst:
+		print inst
+		return
+
+ 	differences = fdifferences(n)
+ 	x = []
+ 	y = []
+ 	h = (b - a) / n
+ 	x.append(a)
+ 	y.append(y0)
+ 	for i in range(1, n):
+ 		x.append(a + i * h)
+ 		summ = 0
+ 		for s in range(1, m + 1):
+ 			if(s <= i):
+ 				summ += gauss5(s, alphaintrapol) * differences[s][i - s]
+ 			else:
+ 				break
+ 		delta = y[i - 1] + h * summ
+ 		y1 = h * f(x[i], y[i - 1]) + delta
+ 		y2 = h * f(x[i], y1) + delta
+ 		while(abs(y1 - y2) > eps):
+ 			y1 = h * f(x[i], y2) + delta
+ 			y2 = h * f(x[i], y1) + delta
+ 		y.append(y2)
+ 	return x, y
+
+
+rungekuttarrx, rungekuttarry = rungekutt(100)
+plt.plot(rungekuttarrx, rungekuttarry)
+eulerarrx, eulerarry = euler(100)
+plt.plot(eulerarrx, eulerarry)
+adamsarrx, adamsarry = extrapoladams(100, 49)
+plt.plot(adamsarrx, adamsarry)
+adamsinterpolx, adamsinterpoly = intrapoladams(100, 49)
+plt.plot(adamsinterpolx, adamsinterpoly)
+plt.show()
